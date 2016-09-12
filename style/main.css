@@ -1,0 +1,25 @@
+
+
+#vb_text {
+	width: 100%;
+	height: 40%;
+}
+
+#ts_text {
+	width: 100%;
+	height: 40%;
+}
+
+#structure_view {
+	width: 100%;
+}
+
+.token {
+	display: inline;
+	border: 1px #DDDDDD solid;
+	padding: 4px;
+	margin-right: 5px;
+	font-family: monospace;
+	font-size: 10px;
+	background: rgba(0,0,255,.1);
+}
