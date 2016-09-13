@@ -1,0 +1,6 @@
+
+
+*.js
+!app.min.js
+
+*.sublime-workspace

@@ -1,8 +1,13 @@
 objects= tokenizer.js main.js
 target= app.min.js
 
-all: $(objects)
+.PHONY: tests
+
+all: $(objects) tests
 	cat $(objects) > ../app.min.js
 
 %.js: %.ts
 	tsc $<
+
+tests:
+	make -C tests

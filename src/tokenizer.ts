@@ -24,7 +24,10 @@ enum TokenType {
 	NotKeyword,
 	SetKeyword,
 	NewKeyword,
+	RedimKeyword,
 
+	ParanthesisGroup,
+	FunctionArguments, //A special case of a paranthesis group
 	Condition,
 	FunctionDeclaration,
 	Assignment,
@@ -70,7 +73,23 @@ var Keywords = Object.freeze({
 	not: TokenType.NotKeyword,
 	set: TokenType.SetKeyword,
 	new: TokenType.NewKeyword,
+	redim: TokenType.RedimKeyword,
 });
+
+enum BlockType {
+	Class,
+	Function,
+	Module,
+}
+
+class CodeContext {
+	constructor(public type: BlockType) {
+	}
+}
+
+var classContext = new CodeContext(BlockType.Class);
+var functionContext = new CodeContext(BlockType.Function);
+var moduleContext = new CodeContext(BlockType.Module);
 
 class Token {
 	type: TokenType = TokenType.Word;
@@ -161,7 +180,7 @@ class Statement extends Token {
 			case TokenType.EndStatement:
 				return this.getBefore() +  "}" + this.getAfter();
 			case TokenType.IfStatement:
-				return this.getBefore() + "if (" + this.getByType(TokenType.Condition).toString() + ")" + this.getAfter();
+				return this.getBefore() + "if (" + this.getByType(TokenType.Condition) + ")" + this.getAfter();
 			case TokenType.ElseStatement:
 				return this.getBefore() + "else {" + this.getAfter();
 			default:
@@ -184,7 +203,7 @@ class VariableDeclaration extends Statement {
 	}
 
 	toString() {
-		return this.getBefore() + this.getByType(TokenType.DeclarationName) + ": " + this.getByType(TokenType.DeclarationType) + this.getAfter();
+		return this.getBefore() + this.getByType(TokenType.DeclarationName).toString() + ": " + this.getByType(TokenType.DeclarationType) + this.getAfter();
 	}
 }
 
@@ -198,7 +217,7 @@ class FunctionDeclaration extends Statement {
 
 	toString() {
 		//Todo: Add arguments
-		return this.front().textBefore + this.getByType(TokenType.FunctionName) + "() {" + this.back().textAfter;
+		return this.front().textBefore + this.getByType(TokenType.FunctionName) + "" + this.getByType(TokenType.FunctionArguments).toString() + " {" + this.back().textAfter;
 	}
 
 }
@@ -260,6 +279,17 @@ class Tokenizer {
 			token.textBefore = textBefore;
 			token.textAfter = textAfter;
 			token.setText(tokenText);
+			switch(state) {
+				case TokenizerState.Digit:
+					token.type = TokenType.Digit;
+					break;
+				case TokenizerState.Word:
+					token.type = TokenType.Word;
+					break;
+				case TokenizerState.Operators:
+					token.type = TokenType.Operator;
+					break;
+			}
 			setKeywordType(token);
 
 			tokens.push(token);
@@ -305,16 +335,22 @@ class Tokenizer {
 				case "8":
 				case "9":
 				case ".":
+					if (textAfter.length > 0) {
+						pushToken();
+					}
 					if (state != TokenizerState.Digit && state != TokenizerState.Word && tokenText.length > 0) {
 						pushToken();
 					}
+					let ti = i;
 					while (!isNaN(parseInt(c)) || c == ".") {
 						tokenText += c;
 						++col;
-						++i;
-						c = text[i];
+						++ti;
+						c = text[ti];
 					}
-					pushToken().type = state == TokenizerState.Digit? TokenType.Digit: TokenType.Word;
+					i = ti - 1;
+					// let nType = state == TokenizerState.Digit? TokenType.Digit: TokenType.Word;
+					// pushToken().type = nType;
 					continue; //Skip to the next iteration
 				default:
 					//Se if there is any token to flush
@@ -352,6 +388,21 @@ class Tokenizer {
 	processStatement(statement: Statement) {
 		if (statement.isStatement) {
 			let tokens = statement.tokens;
+			//First group by paranthesis
+			for (let i = tokens.length -1; i >= 0; --i) {
+				if (tokens[i].text == "(") {
+					for (let j = i + 1; j < tokens.length; ++j) {
+						if (tokens[j].text == ")") {
+							let group = new Statement();
+							group.type = TokenType.ParanthesisGroup;
+							group.tokens = tokens.splice(i, j-i+1, group);
+							break;
+						}
+					}
+				}
+			}
+
+
 			for (let i = 0; i < tokens.length; ++i) {
 				if (tokens[i].type == TokenType.AsKeyword && statement.tokens.length > (i + 1)) {
 					tokens[i+1].type = TokenType.DeclarationType;
@@ -371,6 +422,9 @@ class Tokenizer {
 					if (t.type == TokenType.FunctionKeyword || t.type == TokenType.MethodKeyword) {
 						statement = new FunctionDeclaration(statement);
 						statement.tokens[2].type = TokenType.FunctionName;
+						if (tokens[3].type == TokenType.ParanthesisGroup) {
+							tokens[3].type = TokenType.FunctionArguments;
+						}
 					}
 				}
 			}
@@ -428,7 +482,11 @@ class Tokenizer {
 				currentStatement.hasNewline = true;
 				t.textAfter = "";
 				t.hasNewline = false;
-				currentStatement = this.processStatement(currentStatement); //Process the statement
+				try {
+					currentStatement = this.processStatement(currentStatement); //Process the statement
+				} catch(e) {
+					console.error(e);
+				}
 				statements.push(currentStatement);
 				currentStatement = new Statement();
 			}

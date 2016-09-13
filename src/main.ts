@@ -17,7 +17,12 @@ $(document).ready( function(){
 		let output = "";
 
 		for (let s of statements) {
-			output += s.toString() + " ";
+			try {
+				output += s.toString(classContext) + " ";
+			}
+			catch (e) {
+				console.error(e);
+			}
 		}
 
 		var wrap = function(text) {
@@ -44,7 +49,12 @@ $(document).ready( function(){
 		let out2 = "";
 
 		for (let s of statements) {
-			out2 += drawStatement(s) + "<br>";
+			try {
+				out2 += drawStatement(s) + "<br>";
+			}
+			catch (e) {
+				console.error(e);
+			}
 		}
 
 		$structure_view.html(out2);
