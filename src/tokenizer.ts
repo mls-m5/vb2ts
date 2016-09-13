@@ -200,7 +200,7 @@ class Statement extends Token {
 			case TokenType.EndStatement:
 				return this.wrap("}");
 			case TokenType.IfStatement:
-				return this.getBefore() + "if (" + this.getByType(TokenType.Condition) + ")" + this.getAfter();
+				return this.getBefore() + "if (" + this.getByType(TokenType.Condition) + ") {" + this.getAfter();
 			case TokenType.ElseStatement:
 				return this.getBefore() + "else {" + this.getAfter();
 			case TokenType.VariableDeclaration:
