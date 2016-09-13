@@ -148,6 +148,7 @@ class Statement extends Token {
 				return t;
 			}
 		}
+		return null;
 	}
 
 	constructor(statement?: Statement) {
@@ -261,6 +262,33 @@ function setKeywordType(token: Token) {
 		token.type = type;
 		return;
 	}
+
+
+	let firstCharacter = token.text[0];
+	if (token.text.length > 0) {
+		if (isDigit(firstCharacter)) {
+			token.type = TokenType.Digit;
+			return;
+		}
+		else if (token.text.length > 1 && firstCharacter == "." &&
+			isDigit(token.text[1])) {
+			token.type = TokenType.Digit;
+			return;
+		}
+	}
+
+	
+	if (operators.indexOf(firstCharacter) >= 0) {
+		token.type = TokenType.Operator;
+		if (token.text == "=") {
+			token.type = TokenType.EqualOperator;
+		}
+	}
+
+}
+
+function isDigit(character: string) {
+	return !isNaN(parseInt(character));
 }
 
 class Tokenizer {
@@ -279,17 +307,7 @@ class Tokenizer {
 			token.textBefore = textBefore;
 			token.textAfter = textAfter;
 			token.setText(tokenText);
-			switch(state) {
-				case TokenizerState.Digit:
-					token.type = TokenType.Digit;
-					break;
-				case TokenizerState.Word:
-					token.type = TokenType.Word;
-					break;
-				case TokenizerState.Operators:
-					token.type = TokenType.Operator;
-					break;
-			}
+
 			setKeywordType(token);
 
 			tokens.push(token);
@@ -297,6 +315,8 @@ class Tokenizer {
 			textAfter = "";
 			tokenText = "";
 			state = TokenizerState.None;
+
+
 			return token;
 		}
 
@@ -335,23 +355,28 @@ class Tokenizer {
 				case "8":
 				case "9":
 				case ".":
-					if (textAfter.length > 0) {
-						pushToken();
+					if (state = TokenizerState.Word) {
+						//Continue to word if a word is already started
 					}
-					if (state != TokenizerState.Digit && state != TokenizerState.Word && tokenText.length > 0) {
-						pushToken();
+					else {
+						if (textAfter.length > 0) {
+							pushToken();
+						}
+						if (state != TokenizerState.Digit && state != TokenizerState.Word && tokenText.length > 0) {
+							pushToken();
+						}
+						let ti = i;
+						while (isDigit(c) || c == ".") {
+							tokenText += c;
+							++col;
+							++ti;
+							c = text[ti];
+						}
+						i = ti - 1;
+						// let nType = state == TokenizerState.Digit? TokenType.Digit: TokenType.Word;
+						// pushToken().type = nType;
+						continue; //Skip to the next iteration
 					}
-					let ti = i;
-					while (!isNaN(parseInt(c)) || c == ".") {
-						tokenText += c;
-						++col;
-						++ti;
-						c = text[ti];
-					}
-					i = ti - 1;
-					// let nType = state == TokenizerState.Digit? TokenType.Digit: TokenType.Word;
-					// pushToken().type = nType;
-					continue; //Skip to the next iteration
 				default:
 					//Se if there is any token to flush
 					if (textAfter.length > 0) {
@@ -359,7 +384,7 @@ class Tokenizer {
 					}
 					//Then continue with the current token
 					if (operators.indexOf(c) >= 0 || paranthesis.indexOf(c) >= 0) {
-						if (tokenText.length >= 0) {
+						if (tokenText.length > 0) {
 							pushToken();
 						}
 						tokenText += c;
@@ -461,7 +486,7 @@ class Tokenizer {
 					}
 				}
 			}
-			else if (statement.tokens.length > 2 && statement.tokens[0].type == TokenType.Word && statement.tokens[0].type == TokenType.EqualOperator) {
+			else if (statement.tokens.length > 3 && statement.type != TokenType.Condition && statement.getByType(TokenType.EqualOperator)) {
 				statement.type = TokenType.Assignment;
 			}
 

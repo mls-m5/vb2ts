@@ -2,7 +2,8 @@
 
 
 function compareList(a, memberName, b) {
-	for (let i = 0; i < a.length; ++i) {
+	assert_eq(a.length, b.length, "Lists are not of same length");
+	for (let i = 0; i < a.length, i < b.length; ++i) {
 		// console.log("comparing " + a[i][memberName] + "with" + b[i]);
 		assert_eq(a[i][memberName], b[i]);
 	}
@@ -27,6 +28,14 @@ var tests = {
 		compareList(tokens, "text", ["a", "0", ".2"]);
 		assert_eq(tokens[2].textAfter, " \n");
 		assert_eq(tokens[2].type, TokenType.Digit, "Wrong type on digit token");
+	},
+
+	assignmentOperatorTest: function() {
+		var tokenizer = new Tokenizer();
+		let tokens = tokenizer.tokenize(" i = 2 ");
+
+		compareList(tokens, "type", [TokenType.Word, TokenType.EqualOperator, TokenType.Digit]);
+
 	}
 }
 
