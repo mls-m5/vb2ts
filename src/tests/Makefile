@@ -1,12 +1,12 @@
-tests = tokenizer-test.js
-objects = ../tokenizer.js
+tests = tokenizer-test.js interpreter-test.js
+objects = ../tokenizer.js test-main.js
 
 
 
 all: $(tests)
 
 
-%.js: %.ts $(objects)
+%.js: %.ts
 	tsc $< --out $@.tmp
 	cat $@.tmp > $@
 	rm $@.tmp

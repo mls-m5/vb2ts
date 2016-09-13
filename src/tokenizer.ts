@@ -25,6 +25,7 @@ enum TokenType {
 	SetKeyword,
 	NewKeyword,
 	RedimKeyword,
+	WithKeyword,
 
 	ParanthesisGroup,
 	FunctionArguments, //A special case of a paranthesis group
@@ -40,6 +41,8 @@ enum TokenType {
 	MethodCall,
 	DeclarationType,
 	DeclarationName,
+	WithStatement,
+	WithTarget,
 
 	//Name of higher analysis
 	FunctionName,
@@ -74,6 +77,7 @@ var Keywords = Object.freeze({
 	set: TokenType.SetKeyword,
 	new: TokenType.NewKeyword,
 	redim: TokenType.RedimKeyword,
+	with: TokenType.WithKeyword,
 });
 
 enum BlockType {
@@ -133,8 +137,20 @@ class Token {
 		return text;
 	}
 
+	wrap(text: string) {
+		return this.textBefore + text + this.textAfter;
+	}
+
 	toString() {
-		return this.textBefore + this.rawText + this.textAfter;
+		switch (this.type) {
+			case TokenType.NewKeyword:
+				return this.wrap(this.text);
+			default:
+				// if (this.text == ".") {
+				// 	return this.wrap("_with_tmp" + this.text);
+				// }
+				return this.wrap(this.rawText);;
+		}
 	}
 }
 
@@ -173,17 +189,26 @@ class Statement extends Token {
 	getAfter() {
 		return this.back().textAfter;
 	}
+	wrap(text: string) {
+		return this.getBefore() + text + this.getAfter();
+	}
 
 	toString() {
 		let text = "";
 
 		switch (this.type) {
 			case TokenType.EndStatement:
-				return this.getBefore() +  "}" + this.getAfter();
+				return this.wrap("}");
 			case TokenType.IfStatement:
 				return this.getBefore() + "if (" + this.getByType(TokenType.Condition) + ")" + this.getAfter();
 			case TokenType.ElseStatement:
 				return this.getBefore() + "else {" + this.getAfter();
+			case TokenType.VariableDeclaration:
+				return this.getBefore() + this.getByType(TokenType.DeclarationName).toString() + ": " + this.getByType(TokenType.DeclarationType) + this.getAfter();
+			case TokenType.FunctionDeclaration:
+				return this.front().textBefore + this.getByType(TokenType.FunctionName) + "" + this.getByType(TokenType.FunctionArguments).toString() + " {" + this.back().textAfter;
+			case TokenType.WithStatement:
+				return this.wrap("{ let _with_tmp = " + this.getByType(TokenType.WithTarget) + ";");
 			default:
 				break;
 		}
@@ -195,38 +220,34 @@ class Statement extends Token {
 	}
 }
 
-class VariableDeclaration extends Statement {
-	type = TokenType.VariableDeclaration;
-	scope: Token;
+// class VariableDeclaration extends Statement {
+// 	type = TokenType.VariableDeclaration;
+// 	scope: Token;
 
-	constructor(statement: Statement) {
-		super(statement);
-	}
+// 	constructor(statement: Statement) {
+// 		super(statement);
+// 	}
 
-	toString() {
-		return this.getBefore() + this.getByType(TokenType.DeclarationName).toString() + ": " + this.getByType(TokenType.DeclarationType) + this.getAfter();
-	}
-}
+// 	toString() {
+// 		return this.getBefore() + this.getByType(TokenType.DeclarationName).toString() + ": " + this.getByType(TokenType.DeclarationType) + this.getAfter();
+// 	}
+// }
 
-class FunctionDeclaration extends Statement {
-	type = TokenType.FunctionDeclaration;
-	scope: Token;
+// class FunctionDeclaration extends Statement {
+// 	type = TokenType.FunctionDeclaration;
+// 	scope: Token;
 
-	constructor(statement: Statement) {
-		super(statement);
-	}
+// 	constructor(statement: Statement) {
+// 		super(statement);
+// 	}
 
-	toString() {
-		//Todo: Add arguments
-		return this.front().textBefore + this.getByType(TokenType.FunctionName) + "" + this.getByType(TokenType.FunctionArguments).toString() + " {" + this.back().textAfter;
-	}
+// 	toString() {
+// 		//Todo: Add arguments
+// 		return this.front().textBefore + this.getByType(TokenType.FunctionName) + "" + this.getByType(TokenType.FunctionArguments).toString() + " {" + this.back().textAfter;
+// 	}
 
-}
+// }
 
-
-class FunctionCall {
-
-}
 
 enum TokenizerState {
 	None,
@@ -277,7 +298,7 @@ function setKeywordType(token: Token) {
 		}
 	}
 
-	
+
 	if (operators.indexOf(firstCharacter) >= 0) {
 		token.type = TokenType.Operator;
 		if (token.text == "=") {
@@ -408,118 +429,5 @@ class Tokenizer {
 		}
 
 		return tokens;
-	}
-
-	processStatement(statement: Statement) {
-		if (statement.isStatement) {
-			let tokens = statement.tokens;
-			//First group by paranthesis
-			for (let i = tokens.length -1; i >= 0; --i) {
-				if (tokens[i].text == "(") {
-					for (let j = i + 1; j < tokens.length; ++j) {
-						if (tokens[j].text == ")") {
-							let group = new Statement();
-							group.type = TokenType.ParanthesisGroup;
-							group.tokens = tokens.splice(i, j-i+1, group);
-							break;
-						}
-					}
-				}
-			}
-
-
-			for (let i = 0; i < tokens.length; ++i) {
-				if (tokens[i].type == TokenType.AsKeyword && statement.tokens.length > (i + 1)) {
-					tokens[i+1].type = TokenType.DeclarationType;
-					if (i > 0 && tokens[i-1].type == TokenType.Word) {
-						tokens[i-1].type = TokenType.DeclarationName;
-					}
-				}
-			}
-
-			let first = statement.tokens[0];
-			//Checking for variable declarations
-			if (first.type == TokenType.ScopeDeclaration) {
-				statement = new VariableDeclaration(statement);
-
-				if (statement.tokens.length > 1) {
-					let t = statement.tokens[1];
-					if (t.type == TokenType.FunctionKeyword || t.type == TokenType.MethodKeyword) {
-						statement = new FunctionDeclaration(statement);
-						statement.tokens[2].type = TokenType.FunctionName;
-						if (tokens[3].type == TokenType.ParanthesisGroup) {
-							tokens[3].type = TokenType.FunctionArguments;
-						}
-					}
-				}
-			}
-			else if(first.type == TokenType.EndKeyword) {
-				statement.type = TokenType.EndStatement;
-			}
-			else if(first.type == TokenType.ElseKeyword) {
-				statement.type = TokenType.ElseStatement;
-			}
-			else if (first.type == Keywords.set) {
-				statement.type = TokenType.Assignment;
-				statement.tokens[1].type = TokenType.AssignmentTarget;
-			}
-			else if (first.text == "for") {
-				statement.type = TokenType.Loop;
-			}
-			else if (first.type == TokenType.Word && statement.tokens.length > 1 &&
-				(statement.tokens[1].type == TokenType.Word || statement.tokens[1].type == TokenType.Digit)) {
-				statement.type = TokenType.MethodCall;
-				first.type = TokenType.FunctionName;
-
-				let args = new Statement();
-				args.type = TokenType.MethodArguments;
-				args.tokens = statement.tokens.splice(1, statement.tokens.length - 1, args);			
-			}
-			else if (first.type == TokenType.IfKeyword) {
-				statement.type = TokenType.IfStatement;
-				for (let i = 1; i < statement.tokens.length; ++i) {
-					if (statement.tokens[i].type == TokenType.ThenKeyword) {
-						let condition = new Statement();
-						condition.type = TokenType.Condition;
-						condition.tokens = statement.tokens.splice(1, i - 1, condition);
-						break;
-					}
-				}
-			}
-			else if (statement.tokens.length > 3 && statement.type != TokenType.Condition && statement.getByType(TokenType.EqualOperator)) {
-				statement.type = TokenType.Assignment;
-			}
-
-		}
-		return statement;
-	}
-
-	group(tokens: Token[]) {
-		let currentStatement: Statement = new Statement();
-		let statements: Statement[] = [];
-		
-		for (let i in tokens) {
-			let t = tokens[i];
-			currentStatement.type = TokenType.Line;
-			currentStatement.tokens.push(t);
-			if (t.hasNewline) {
-				currentStatement.textAfter = t.textAfter;
-				currentStatement.hasNewline = true;
-				t.textAfter = "";
-				t.hasNewline = false;
-				try {
-					currentStatement = this.processStatement(currentStatement); //Process the statement
-				} catch(e) {
-					console.error(e);
-				}
-				statements.push(currentStatement);
-				currentStatement = new Statement();
-			}
-		}
-
-		if (currentStatement.tokens.length > 0) {
-			statements.push(currentStatement);
-		}
-		return statements;
 	}
 }

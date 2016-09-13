@@ -1,4 +1,4 @@
-objects= tokenizer.js main.js
+objects= tokenizer.js interpreter.js main.js
 target= app.min.js
 
 .PHONY: tests

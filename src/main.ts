@@ -1,8 +1,10 @@
 /// <reference path="jquery.d.ts" />
-/// <reference path="tokenizer.ts" />
+/// <reference path="interpreter.ts" />
+
 
 $(document).ready( function(){
 	var tokenizer = new Tokenizer();
+	var interpreter = new Interpreter();
 
 	var $vb_text = $("#vb_text");
 	var $ts_text = $("#ts_text");
@@ -12,13 +14,13 @@ $(document).ready( function(){
 	$vb_text.on("change keyup paste", function() {
 		let tokens = tokenizer.tokenize($vb_text.val());
 
-		let statements = tokenizer.group(tokens);
+		let statements = interpreter.group(tokens);
 
 		let output = "";
 
 		for (let s of statements) {
 			try {
-				output += s.toString(classContext) + " ";
+				output += s.toString() + " ";
 			}
 			catch (e) {
 				console.error(e);
