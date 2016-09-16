@@ -29,6 +29,8 @@ enum TokenType {
 	NewKeyword,
 	RedimKeyword,
 	WithKeyword,
+	Coma,
+	ExitKeyword,
 
 	VariableDeclarationGroup, //The touple [x] As [type]
 	ParanthesisGroup,
@@ -50,6 +52,8 @@ enum TokenType {
 	MemberName, //The combination of a period and a word
 	MemberNameGroup, //A group that contains the member name
 	WithMemberGroup, //A member group that is meant for a With-statement
+	DeclarationSeparator, //The coma between variable declarations
+	ExitStatement,
 
 	//Name of higher analysis
 	FunctionName,
@@ -85,6 +89,8 @@ var Keywords = Object.freeze({
 	new: TokenType.NewKeyword,
 	redim: TokenType.RedimKeyword,
 	with: TokenType.WithKeyword,
+	",": TokenType.Coma,
+	exit: TokenType.ExitKeyword,
 });
 
 
@@ -96,6 +102,18 @@ var shorthandVariableTypes = Object.freeze({
 	"#": "Double",
 	"$": "String",
 });
+
+var typeTranslation = Object.freeze({
+	"Integer": "number",
+	"Long": "number",
+	"Decimal": "number",
+	"Single": "number",
+	"Double": "number",
+	"String": "string",
+	"Boolean": "boolean",
+	"Byte": "number",
+});
+
 
 
 function isShorthandSign(c) {
@@ -176,6 +194,26 @@ class Token {
 				return this.textBefore + "!";
 			case TokenType.SetKeyword:
 				return this.wrap(""); //Hide the keyword, it is not the same in javascript
+			case TokenType.DeclarationType:
+				let t = typeTranslation[this.rawText];
+				if (t) {
+					return this.wrap(t);
+				}
+				else {
+					return this.wrap(this.rawText);
+				}
+			case TokenType.DeclarationSeparator:
+				if (interpreterContext.currentScope == ScopeType.Class) {
+					return this.wrap(";");
+				}
+				else return this.wrap(this.rawText);
+			case TokenType.Word:
+				if (interpreterContext.isClassVariable(this.text)) {
+					return this.wrap("this." + this.rawText);
+				}
+				else {
+					return this.wrap(this.rawText);
+				}
 			default:
 				// if (this.text == ".") {
 				// 	return this.wrap("_with_tmp" + this.text);
@@ -215,8 +253,9 @@ class Statement extends Token {
 	getAfter() {
 		return this.back().textAfter;
 	}
-	wrap(text: string) {
-		return this.getBefore() + text + this.getAfter();
+	wrap(text: string, semicolon = false) {
+		let colontext = semicolon?";":"" ;
+		return this.getBefore() + text + colontext + this.getAfter();
 	}
 	setTokens(tokens: Token[]) {
 		this.tokens = tokens;
@@ -238,12 +277,16 @@ class Statement extends Token {
 				interpreterContext.pushScope(ScopeType.Function);
 				return this.wrap("if (" + this.getByType(TokenType.Condition) + ") {");
 			case TokenType.ElseStatement:
-				return this.wrap("else {");
+				return this.wrap("} else {");
 			case TokenType.WithMemberGroup:
 				// return this.wrap(interpreterContext.currentWith.toString() + "." + this.getByType(TokenType.MemberName));
 				return this.wrap("_with_tmp." + this.getByType(TokenType.MemberName));
 			case TokenType.VariableDeclarationGroup:
-				return this.wrap(this.getByType(TokenType.DeclarationName) + ": " + this.getByType(TokenType.DeclarationType));
+				let variableName = this.getByType(TokenType.DeclarationName).text;
+				if (interpreterContext.currentScope == ScopeType.Class) {
+					interpreterContext.classVariables[variableName] = this;
+				}
+				return this.wrap(variableName + ": " + this.getByType(TokenType.DeclarationType));
 			case TokenType.FunctionDeclaration:
 				interpreterContext.pushScope(ScopeType.Function);
 				return this.wrap(this.getByType(TokenType.FunctionName) + "" + this.getByType(TokenType.FunctionArguments).toString() + " {");
@@ -252,7 +295,9 @@ class Statement extends Token {
 				interpreterContext.currentWith = this.getByType(TokenType.WithTarget);
 				return this.wrap("{ let _with_tmp = " + this.getByType(TokenType.WithTarget) + ";");
 			case TokenType.MethodCall:
-				return this.wrap(this.getByType(TokenType.FunctionName) + "(" + this.getByType(TokenType.MethodArguments) + ")");
+				return this.wrap(this.getByType(TokenType.FunctionName) + "(" + this.getByType(TokenType.MethodArguments) + ")", true);
+			case TokenType.ExitStatement:
+				return this.wrap("return", true);
 
 			default:
 				break;
@@ -276,7 +321,7 @@ enum TokenizerState {
 	Paranthesis,
 };
 
-var operators = "+-*/^.><=%@!#$&"; //Different special characters
+var operators = "+-*/^,.><=%@!#$&"; //Different special characters
 var paranthesis = "()[]";
 
 function setKeywordType(token: Token) {

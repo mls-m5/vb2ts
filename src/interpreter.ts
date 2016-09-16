@@ -13,17 +13,29 @@ class InterpreterContext {
 	interpreterScopeStack: ScopeType[] = [];
 	currentScope: ScopeType = ScopeType.Class;
 	currentWith: Token;
+	classVariables = {};
+	localVariables = {};
 
 	reset() {
 		this.currentWith = null;
 		this.interpreterScopeStack = [];
 		this.currentScope = ScopeType.Class;
-
+		this.classVariables = {};
+		this.localVariables = {};
 	}
 
 	pushScope(scope: ScopeType) {
 		this.interpreterScopeStack.push(this.currentScope);
 		this.currentScope = scope;
+	}
+
+	isClassVariable(name: string) {
+		if (typeof this.classVariables[name] !== 'undefined') {
+			if (typeof this.localVariables[name] === 'undefined') {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	//Pops the last scope and return to previous scope
@@ -42,6 +54,11 @@ class InterpreterContext {
 		else {
 			throw "wrong scope type expected type " + ScopeType[this.currentScope] + " got " + ScopeType[scope];
 		}
+
+		//Remove all local variables
+		if (this.currentScope == ScopeType.Class) {
+			this.localVariables = {};
+		}
 	}
 }
 
@@ -49,10 +66,22 @@ var interpreterContext = new InterpreterContext();
 
 
 class Interpreter {
-	processStatement(statement: Statement) {
+	processStatement(statement: Statement, context = new InterpreterContext) {
 		if (statement.isStatement) {
 			let tokens = statement.tokens;
-			//First group by paranthesis
+
+
+
+			for (let i = 0; i < tokens.length; ++i) {
+				if (tokens[i].type == TokenType.AsKeyword && statement.tokens.length > (i + 1)) {
+					tokens[i+1].type = TokenType.DeclarationType;
+					if (i > 0 && tokens[i-1].type == TokenType.Word) {
+						tokens[i-1].type = TokenType.DeclarationName;
+					}
+				}
+			}
+
+			//by paranthesis
 			for (let i = tokens.length -1; i >= 0; --i) {
 				if (tokens[i].text == "(") {
 					for (let j = i + 1; j < tokens.length; ++j) {
@@ -62,16 +91,6 @@ class Interpreter {
 							group.setTokens(tokens.splice(i, j-i+1, group));
 							break;
 						}
-					}
-				}
-			}
-
-
-			for (let i = 0; i < tokens.length; ++i) {
-				if (tokens[i].type == TokenType.AsKeyword && statement.tokens.length > (i + 1)) {
-					tokens[i+1].type = TokenType.DeclarationType;
-					if (i > 0 && tokens[i-1].type == TokenType.Word) {
-						tokens[i-1].type = TokenType.DeclarationName;
 					}
 				}
 			}
@@ -158,6 +177,9 @@ class Interpreter {
 					}
 				}
 			}
+			else if (first.type == TokenType.ExitKeyword) {
+				statement.type = TokenType.ExitStatement;
+			}
 			else if (statement.tokens.length > 3 && statement.type != TokenType.Condition && statement.getByType(TokenType.EqualOperator)) {
 				statement.type = TokenType.Assignment;
 			}
@@ -179,6 +201,11 @@ class Interpreter {
 						tokens[i - 1].type = TokenType.DeclarationName;
 						group.type = TokenType.VariableDeclarationGroup;
 						group.setTokens(tokens.splice(i - 1, 2, group));
+					}
+				}
+				for (let i = 1; i < tokens.length - 1; ++i) {
+					if (tokens[i].type == TokenType.Coma) {
+						tokens[i].type = TokenType.DeclarationSeparator;
 					}
 				}
 			}
