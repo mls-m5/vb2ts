@@ -1,10 +1,47 @@
 
 /// <reference path="tokenizer.ts" />
 
+enum ScopeType {
+	Function,
+	Class,
+	Global,
+	With,
+	ArgumentList
+}
+
+class InterpreterContext {
+	interpreterScopeStack: ScopeType[] = [];
+	currentScope: ScopeType = ScopeType.Class;
+	currentWith: Token;
+
+	pushScope(scope: ScopeType) {
+		this.interpreterScopeStack.push(this.currentScope);
+		this.currentScope = scope;
+	}
+
+	//Pops the last scope and return to previous scope
+	//The scope argument is optional, but can be checked
+	//so that the right scope is popped
+	popScope(scope?: ScopeType) {
+		if (typeof scope === 'undefined') {
+			if (this.interpreterScopeStack.length == 0) {
+				throw "End statement but no scope to end: scope stack empty";
+			}
+			this.currentScope = this.interpreterScopeStack.pop();
+		}
+		else if (scope == this.currentScope) {
+			this.currentScope = this.interpreterScopeStack.pop();
+		}
+		else {
+			throw "wrong scope type expected type " + ScopeType[this.currentScope] + " got " + ScopeType[scope];
+		}
+	}
+}
+
+var interpreterContext = new InterpreterContext();
 
 
 class Interpreter {
-
 	processStatement(statement: Statement) {
 		if (statement.isStatement) {
 			let tokens = statement.tokens;
@@ -28,6 +65,33 @@ class Interpreter {
 					tokens[i+1].type = TokenType.DeclarationType;
 					if (i > 0 && tokens[i-1].type == TokenType.Word) {
 						tokens[i-1].type = TokenType.DeclarationName;
+					}
+				}
+			}
+
+			for (let i = 0; i < tokens.length - 1; ++i) {
+				if (tokens[i].text == "." && tokens[i + 1].type == TokenType.Word) {
+					let group = new Statement();
+					group.type = TokenType.MemberNameGroup;
+					tokens[i + 1].type = TokenType.MemberName;
+					group.tokens = tokens.splice(i, 2, group);
+				}
+			}
+
+			//Check how witch statements is ment to be to a With-statement
+			//that is if there is no name before the dot
+			if (tokens[0].type == TokenType.MemberNameGroup) {
+				tokens[0].type = TokenType.WithMemberGroup;
+			}
+
+
+			//The same as above but for the whole statement
+			for (let i = 1; i < tokens.length; ++i) {
+				if (tokens[i].type == TokenType.MemberNameGroup) {
+					//Todo: Differentiate between ordinary member groups and with groups
+					let tokenBefore = tokens[i - 1];
+					if (tokenBefore.type == TokenType.Operator || tokenBefore.text == "(" || tokenBefore.text == ",") {
+						tokens[i].type = TokenType.WithMemberGroup;
 					}
 				}
 			}
@@ -89,6 +153,27 @@ class Interpreter {
 			}
 			else if (statement.tokens.length > 3 && statement.type != TokenType.Condition && statement.getByType(TokenType.EqualOperator)) {
 				statement.type = TokenType.Assignment;
+			}
+
+			for (let i = 1; i < tokens.length -1; ++i) {
+				if (tokens[i].type == TokenType.AsKeyword) {
+					let group = new Statement();
+					group.type = TokenType.VariableDeclarationGroup;
+					group.tokens = tokens.splice(i - 1, 3, group);
+				}
+			}
+
+			if (statement.type == TokenType.VariableDeclaration || statement.type == TokenType.FunctionArguments) {
+				for (let i = 1; i < tokens.length; ++i) {
+					if (isShorthandSign(tokens[i].text)) {
+						let group = new Statement();
+						tokens[i].type = TokenType.DeclarationType;
+						tokens[i].rawText = shorthandVariableTypes[tokens[i].text]; //Replace the type to the actual type
+						tokens[i - 1].type = TokenType.DeclarationName;
+						group.type = TokenType.VariableDeclarationGroup;
+						group.tokens = tokens.splice(i - 1, 2, group);
+					}
+				}
 			}
 
 		}
