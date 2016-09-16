@@ -22,12 +22,15 @@ $(document).ready( function(){
 
 		for (let s of statements) {
 			try {
-				output += s.toString() + " ";
+				output += s.toString();
 			}
 			catch (e) {
 				console.error(e);
 			}
 		}
+
+		output = (output.replace("\n", "\n\t"));
+		output = "class xx { \n " + output + "\n}";
 
 		var wrap = function(text) {
 			return '<div class="token">' + text + '</div>'

@@ -210,7 +210,10 @@ class Token {
 			case TokenType.NewKeyword:
 				return this.wrap(this.text);
 			case TokenType.ScopeDeclaration:
-				if (interpreterContext.currentScope == ScopeType.Class) {
+				if (this.specifier == ScopeTypes.static) {
+					return this.wrap("// Static type not supported implement in other way : ");
+				}
+				else if (interpreterContext.currentScope == ScopeType.Class) {
 					return this.textBefore;
 				}
 				else {
@@ -308,10 +311,10 @@ class Statement extends Token {
 				// return this.wrap(interpreterContext.currentWith.toString() + "." + this.getByType(TokenType.MemberName));
 				return this.wrap("_with_tmp." + this.getByType(TokenType.MemberName));
 			case TokenType.VariableDeclarationGroup:
-				let variableName = this.getByType(TokenType.DeclarationName).rawText;
-				interpreterContext.declareVariable(variableName, this);
+				let variableNameToken = this.getByType(TokenType.DeclarationName);
+				interpreterContext.declareVariable(variableNameToken.text, this);
 				let addSemicolon = false;//interpreterContext.currentScope == ScopeType.Class;
-				return this.wrap(variableName + ": " + this.getByType(TokenType.DeclarationType), addSemicolon);
+				return this.wrap(variableNameToken.rawText + ": " + this.getByType(TokenType.DeclarationType), addSemicolon);
 			case TokenType.FunctionDeclaration:
 				let functionNameToken = this.getByType(TokenType.FunctionName);
 				let functionName: string;
