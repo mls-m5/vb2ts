@@ -14,6 +14,13 @@ class InterpreterContext {
 	currentScope: ScopeType = ScopeType.Class;
 	currentWith: Token;
 
+	reset() {
+		this.currentWith = null;
+		this.interpreterScopeStack = [];
+		this.currentScope = ScopeType.Class;
+
+	}
+
 	pushScope(scope: ScopeType) {
 		this.interpreterScopeStack.push(this.currentScope);
 		this.currentScope = scope;
@@ -52,7 +59,7 @@ class Interpreter {
 						if (tokens[j].text == ")") {
 							let group = new Statement();
 							group.type = TokenType.ParanthesisGroup;
-							group.tokens = tokens.splice(i, j-i+1, group);
+							group.setTokens(tokens.splice(i, j-i+1, group));
 							break;
 						}
 					}
@@ -74,7 +81,7 @@ class Interpreter {
 					let group = new Statement();
 					group.type = TokenType.MemberNameGroup;
 					tokens[i + 1].type = TokenType.MemberName;
-					group.tokens = tokens.splice(i, 2, group);
+					group.setTokens(tokens.splice(i, 2, group));
 				}
 			}
 
@@ -138,7 +145,7 @@ class Interpreter {
 
 				let args = new Statement();
 				args.type = TokenType.MethodArguments;
-				args.tokens = statement.tokens.splice(1, statement.tokens.length - 1, args);			
+				args.setTokens(statement.tokens.splice(1, statement.tokens.length - 1, args));			
 			}
 			else if (first.type == TokenType.IfKeyword) {
 				statement.type = TokenType.IfStatement;
@@ -146,7 +153,7 @@ class Interpreter {
 					if (statement.tokens[i].type == TokenType.ThenKeyword) {
 						let condition = new Statement();
 						condition.type = TokenType.Condition;
-						condition.tokens = statement.tokens.splice(1, i - 1, condition);
+						condition.setTokens(statement.tokens.splice(1, i - 1, condition));
 						break;
 					}
 				}
@@ -159,7 +166,7 @@ class Interpreter {
 				if (tokens[i].type == TokenType.AsKeyword) {
 					let group = new Statement();
 					group.type = TokenType.VariableDeclarationGroup;
-					group.tokens = tokens.splice(i - 1, 3, group);
+					group.setTokens(tokens.splice(i - 1, 3, group));
 				}
 			}
 
@@ -171,7 +178,7 @@ class Interpreter {
 						tokens[i].rawText = shorthandVariableTypes[tokens[i].text]; //Replace the type to the actual type
 						tokens[i - 1].type = TokenType.DeclarationName;
 						group.type = TokenType.VariableDeclarationGroup;
-						group.tokens = tokens.splice(i - 1, 2, group);
+						group.setTokens(tokens.splice(i - 1, 2, group));
 					}
 				}
 			}

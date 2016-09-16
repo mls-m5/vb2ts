@@ -97,6 +97,7 @@ var shorthandVariableTypes = Object.freeze({
 	"$": "String",
 });
 
+
 function isShorthandSign(c) {
 	return typeof shorthandVariableTypes[c] !== 'undefined';
 }
@@ -197,13 +198,8 @@ class Statement extends Token {
 		return null;
 	}
 
-	constructor(statement?: Statement) {
-		super();
-
-		if (statement) {
-			this.tokens = statement.tokens;
-			this.isStatement = statement.isStatement;
-		}
+	constructor(type = TokenType.Word) {
+		super(type);
 	}
 
 	back() {
@@ -222,6 +218,14 @@ class Statement extends Token {
 	wrap(text: string) {
 		return this.getBefore() + text + this.getAfter();
 	}
+	setTokens(tokens: Token[]) {
+		this.tokens = tokens;
+		// this.textBefore = this.front().textBefore;
+		// this.front().textBefore = "";
+
+		// this.textAfter = this.back().textAfter;
+		// this.back().textAfter = "";
+	}
 
 	toString() {
 		let text = "";
@@ -232,20 +236,24 @@ class Statement extends Token {
 				return this.wrap("}");
 			case TokenType.IfStatement:
 				interpreterContext.pushScope(ScopeType.Function);
-				return this.getBefore() + "if (" + this.getByType(TokenType.Condition) + ") {" + this.getAfter();
+				return this.wrap("if (" + this.getByType(TokenType.Condition) + ") {");
 			case TokenType.ElseStatement:
-				return this.getBefore() + "else {" + this.getAfter();
+				return this.wrap("else {");
 			case TokenType.WithMemberGroup:
-				return this.wrap(interpreterContext.currentWith.toString() + "." + this.getByType(TokenType.MemberName));
+				// return this.wrap(interpreterContext.currentWith.toString() + "." + this.getByType(TokenType.MemberName));
+				return this.wrap("_with_tmp." + this.getByType(TokenType.MemberName));
 			case TokenType.VariableDeclarationGroup:
-				return this.getBefore() + this.getByType(TokenType.DeclarationName) + ": " + this.getByType(TokenType.DeclarationType) + this.getAfter();
+				return this.wrap(this.getByType(TokenType.DeclarationName) + ": " + this.getByType(TokenType.DeclarationType));
 			case TokenType.FunctionDeclaration:
 				interpreterContext.pushScope(ScopeType.Function);
-				return this.front().textBefore + this.getByType(TokenType.FunctionName) + "" + this.getByType(TokenType.FunctionArguments).toString() + " {" + this.back().textAfter;
+				return this.wrap(this.getByType(TokenType.FunctionName) + "" + this.getByType(TokenType.FunctionArguments).toString() + " {");
 			case TokenType.WithStatement:
 				interpreterContext.pushScope(ScopeType.With);
 				interpreterContext.currentWith = this.getByType(TokenType.WithTarget);
 				return this.wrap("{ let _with_tmp = " + this.getByType(TokenType.WithTarget) + ";");
+			case TokenType.MethodCall:
+				return this.wrap(this.getByType(TokenType.FunctionName) + "(" + this.getByType(TokenType.MethodArguments) + ")");
+
 			default:
 				break;
 		}
@@ -253,6 +261,7 @@ class Statement extends Token {
 		for (let s of this.tokens) {
 			text += s.toString();
 		}
+
 		return text;
 	}
 }

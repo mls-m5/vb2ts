@@ -18,6 +18,8 @@ $(document).ready( function(){
 
 		let output = "";
 
+		interpreterContext.reset();
+
 		for (let s of statements) {
 			try {
 				output += s.toString() + " ";
