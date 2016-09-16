@@ -33,6 +33,8 @@ enum TokenType {
 	ExitKeyword,
 	OptionKeyword,
 	ExplicitKeyword,
+	StepKeyword,
+	NextKeyword,
 
 	VariableDeclarationGroup, //The touple [x] As [type]
 	ParanthesisGroup,
@@ -42,7 +44,7 @@ enum TokenType {
 	Assignment,
 	AssignmentTarget,
 	MethodArguments,
-	Loop,
+	ForLoop,
 	EndStatement,
 	IfStatement,
 	ElseStatement,
@@ -57,6 +59,12 @@ enum TokenType {
 	DeclarationSeparator, //The coma between variable declarations
 	ExitStatement,
 	OptionStatement,
+	NextStatement,
+
+	ForStart,
+	ForStop,
+	ForStep,
+	ForVariableName,
 
 	//Name of higher analysis
 	FunctionName,
@@ -77,6 +85,10 @@ var LoopTypes = Object.freeze({
 	"while": 1
 });
 
+function isNumeric(num){
+    return !isNaN(num)
+}
+
 var Keywords = Object.freeze({
 	as: TokenType.AsKeyword,
 	to: TokenType.ToKeyword,
@@ -96,6 +108,8 @@ var Keywords = Object.freeze({
 	exit: TokenType.ExitKeyword,
 	option: TokenType.OptionKeyword,
 	explicit: TokenType.ExplicitKeyword,
+	step: TokenType.StepKeyword,
+	next: TokenType.NextKeyword,
 });
 
 
@@ -323,6 +337,25 @@ class Statement extends Token {
 				return this.wrap("return", true);
 			case TokenType.OptionStatement:
 				return "";
+			case TokenType.ForLoop:
+				let varName = this.getByType(TokenType.ForVariableName);
+				let start = this.getByType(TokenType.ForStart);
+				let stop = this.getByType(TokenType.ForStop);
+				let step = this.getByType(TokenType.ForStep);
+				let stepString: string;
+				if (step == null) {
+					stepString = "++" + varName.rawText;
+				}
+				else {
+					stepString = varName.rawText + " += " + step.rawText;
+				}
+
+				interpreterContext.pushScope(ScopeType.Function);
+
+				return this.wrap("for (var " + varName + "= " + start.rawText + "; " + varName + "<= " + stop.rawText + "; " + stepString + ") {");
+			case TokenType.NextStatement:
+				interpreterContext.popScope(ScopeType.Function);
+				return this.wrap("}");
 
 			default:
 				break;

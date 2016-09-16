@@ -175,7 +175,19 @@ class Interpreter {
 				statement.tokens[1].type = TokenType.AssignmentTarget;
 			}
 			else if (first.text == "for") {
-				statement.type = TokenType.Loop;
+				statement.type = TokenType.ForLoop;
+				tokens[1].type = TokenType.ForVariableName;
+				for (let i = 2; i < tokens.length -1; ++i) {
+					if (tokens[i].type == TokenType.EqualOperator) {
+						tokens[i + 1].type = TokenType.ForStart;
+					}
+					else if (tokens[i].type == TokenType.ToKeyword) {
+						tokens[i + 1].type = TokenType.ForStop;
+					}
+					else if (tokens[i].type == TokenType.StepKeyword) {
+						tokens[i + 1].type = TokenType.ForStep;
+					}
+				}
 			}
 			else if (first.type == TokenType.Word && statement.tokens.length > 1 &&
 				(statement.tokens[1].type == TokenType.Word || statement.tokens[1].type == TokenType.Digit)) {
@@ -206,7 +218,9 @@ class Interpreter {
 			else if (statement.tokens.length > 3 && statement.type != TokenType.Condition && statement.getByType(TokenType.EqualOperator)) {
 				statement.type = TokenType.Assignment;
 			}
-
+			else if(first.type == TokenType.NextKeyword) {
+				statement.type = TokenType.NextStatement;
+			}
 			var groupDeclarations = function(tokens: Token[]) {
 				for (let i = 1; i < tokens.length -1; ++i) {
 					if (tokens[i].type == TokenType.AsKeyword) {
