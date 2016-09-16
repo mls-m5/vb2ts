@@ -24,6 +24,20 @@ class InterpreterContext {
 		this.localVariables = {};
 	}
 
+	//Change the scope without pushing
+	setScope(scope: ScopeType) {
+		this.currentScope = scope;
+	}
+
+	declareVariable(name: string, token: Token) {
+		if (this.currentScope == ScopeType.Class) {
+			this.classVariables[name] = token;
+		}
+		else {
+			this.localVariables[name] = token;
+		}
+	}
+
 	pushScope(scope: ScopeType) {
 		this.interpreterScopeStack.push(this.currentScope);
 		this.currentScope = scope;
@@ -131,13 +145,19 @@ class Interpreter {
 				if (statement.tokens.length > 1) {
 					let t = statement.tokens[1];
 					if (t.type == TokenType.FunctionKeyword || t.type == TokenType.MethodKeyword) {
-						// statement = new FunctionDeclaration(statement);
 						statement.type = TokenType.FunctionDeclaration;
 						statement.tokens[2].type = TokenType.FunctionName;
 						if (tokens[3].type == TokenType.ParanthesisGroup) {
 							tokens[3].type = TokenType.FunctionArguments;
 						}
 					}
+				}
+			}
+			if (first.type == TokenType.FunctionKeyword || first.type == TokenType.MethodKeyword) {
+				statement.type = TokenType.FunctionDeclaration;
+				statement.tokens[1].type = TokenType.FunctionName;
+				if (tokens[2].type == TokenType.ParanthesisGroup) {
+					tokens[2].type = TokenType.FunctionArguments;
 				}
 			}
 			else if (first.type == TokenType.WithKeyword) {
@@ -177,6 +197,9 @@ class Interpreter {
 					}
 				}
 			}
+			else if (first.type == TokenType.OptionKeyword) {
+				statement.type = TokenType.OptionStatement;
+			}
 			else if (first.type == TokenType.ExitKeyword) {
 				statement.type = TokenType.ExitStatement;
 			}
@@ -184,32 +207,43 @@ class Interpreter {
 				statement.type = TokenType.Assignment;
 			}
 
-			for (let i = 1; i < tokens.length -1; ++i) {
-				if (tokens[i].type == TokenType.AsKeyword) {
-					let group = new Statement();
-					group.type = TokenType.VariableDeclarationGroup;
-					group.setTokens(tokens.splice(i - 1, 3, group));
+			var groupDeclarations = function(tokens: Token[]) {
+				for (let i = 1; i < tokens.length -1; ++i) {
+					if (tokens[i].type == TokenType.AsKeyword) {
+						let group = new Statement();
+						group.type = TokenType.VariableDeclarationGroup;
+						group.setTokens(tokens.splice(i - 1, 3, group));
+					}
 				}
-			}
-
-			if (statement.type == TokenType.VariableDeclaration || statement.type == TokenType.FunctionArguments) {
 				for (let i = 1; i < tokens.length; ++i) {
 					if (isShorthandSign(tokens[i].text)) {
 						let group = new Statement();
 						tokens[i].type = TokenType.DeclarationType;
-						tokens[i].rawText = shorthandVariableTypes[tokens[i].text]; //Replace the type to the actual type
+						// tokens[i].rawText = shorthandVariableTypes[tokens[i].text]; //Replace the type to the actual type
 						tokens[i - 1].type = TokenType.DeclarationName;
 						group.type = TokenType.VariableDeclarationGroup;
 						group.setTokens(tokens.splice(i - 1, 2, group));
 					}
 				}
+			}
+
+			if (statement.type == TokenType.FunctionDeclaration) {
+				let args = statement.getByType(TokenType.FunctionArguments);
+				if (args && args.isStatement) {
+					let argsStatement = <Statement><any>args;
+					groupDeclarations(argsStatement.tokens);
+				}
+			}
+
+			if (statement.type == TokenType.VariableDeclaration) {
+
+				groupDeclarations(tokens);
 				for (let i = 1; i < tokens.length - 1; ++i) {
 					if (tokens[i].type == TokenType.Coma) {
 						tokens[i].type = TokenType.DeclarationSeparator;
 					}
 				}
 			}
-
 		}
 		return statement;
 	}
@@ -238,6 +272,7 @@ class Interpreter {
 		}
 
 		if (currentStatement.tokens.length > 0) {
+			currentStatement = this.processStatement(currentStatement);
 			statements.push(currentStatement);
 		}
 		return statements;

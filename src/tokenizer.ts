@@ -31,6 +31,8 @@ enum TokenType {
 	WithKeyword,
 	Coma,
 	ExitKeyword,
+	OptionKeyword,
+	ExplicitKeyword,
 
 	VariableDeclarationGroup, //The touple [x] As [type]
 	ParanthesisGroup,
@@ -54,6 +56,7 @@ enum TokenType {
 	WithMemberGroup, //A member group that is meant for a With-statement
 	DeclarationSeparator, //The coma between variable declarations
 	ExitStatement,
+	OptionStatement,
 
 	//Name of higher analysis
 	FunctionName,
@@ -91,6 +94,8 @@ var Keywords = Object.freeze({
 	with: TokenType.WithKeyword,
 	",": TokenType.Coma,
 	exit: TokenType.ExitKeyword,
+	option: TokenType.OptionKeyword,
+	explicit: TokenType.ExplicitKeyword,
 });
 
 
@@ -104,14 +109,21 @@ var shorthandVariableTypes = Object.freeze({
 });
 
 var typeTranslation = Object.freeze({
-	"Integer": "number",
-	"Long": "number",
-	"Decimal": "number",
-	"Single": "number",
-	"Double": "number",
-	"String": "string",
-	"Boolean": "boolean",
-	"Byte": "number",
+	"integer": "number",
+	"long": "number",
+	"decimal": "number",
+	"single": "number",
+	"double": "number",
+	"string": "string",
+	"boolean": "boolean",
+	"byte": "number",
+
+	"%": "number",
+	"&": "number",
+	"@": "number",
+	"!": "number",
+	"#": "number",
+	"$": "string",
 });
 
 
@@ -195,7 +207,7 @@ class Token {
 			case TokenType.SetKeyword:
 				return this.wrap(""); //Hide the keyword, it is not the same in javascript
 			case TokenType.DeclarationType:
-				let t = typeTranslation[this.rawText];
+				let t = typeTranslation[this.text];
 				if (t) {
 					return this.wrap(t);
 				}
@@ -282,14 +294,21 @@ class Statement extends Token {
 				// return this.wrap(interpreterContext.currentWith.toString() + "." + this.getByType(TokenType.MemberName));
 				return this.wrap("_with_tmp." + this.getByType(TokenType.MemberName));
 			case TokenType.VariableDeclarationGroup:
-				let variableName = this.getByType(TokenType.DeclarationName).text;
-				if (interpreterContext.currentScope == ScopeType.Class) {
-					interpreterContext.classVariables[variableName] = this;
-				}
-				return this.wrap(variableName + ": " + this.getByType(TokenType.DeclarationType));
+				let variableName = this.getByType(TokenType.DeclarationName).rawText;
+				interpreterContext.declareVariable(variableName, this);
+				let addSemicolon = false;//interpreterContext.currentScope == ScopeType.Class;
+				return this.wrap(variableName + ": " + this.getByType(TokenType.DeclarationType), addSemicolon);
 			case TokenType.FunctionDeclaration:
-				interpreterContext.pushScope(ScopeType.Function);
-				return this.wrap(this.getByType(TokenType.FunctionName) + "" + this.getByType(TokenType.FunctionArguments).toString() + " {");
+				let functionName = this.getByType(TokenType.FunctionName).text;
+				if (functionName == "new") {
+					functionName = "constructor";
+				}
+				interpreterContext.pushScope(ScopeType.ArgumentList);
+				let argsString = this.getByType(TokenType.FunctionArguments).toString();
+
+				interpreterContext.setScope(ScopeType.Function);
+
+				return this.wrap(functionName + "" + argsString + " {");
 			case TokenType.WithStatement:
 				interpreterContext.pushScope(ScopeType.With);
 				interpreterContext.currentWith = this.getByType(TokenType.WithTarget);
@@ -298,6 +317,8 @@ class Statement extends Token {
 				return this.wrap(this.getByType(TokenType.FunctionName) + "(" + this.getByType(TokenType.MethodArguments) + ")", true);
 			case TokenType.ExitStatement:
 				return this.wrap("return", true);
+			case TokenType.OptionStatement:
+				return "";
 
 			default:
 				break;
