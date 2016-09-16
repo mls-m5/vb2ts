@@ -299,9 +299,13 @@ class Statement extends Token {
 				let addSemicolon = false;//interpreterContext.currentScope == ScopeType.Class;
 				return this.wrap(variableName + ": " + this.getByType(TokenType.DeclarationType), addSemicolon);
 			case TokenType.FunctionDeclaration:
-				let functionName = this.getByType(TokenType.FunctionName).text;
-				if (functionName == "new") {
+				let functionNameToken = this.getByType(TokenType.FunctionName);
+				let functionName: string;
+				if (functionNameToken.text == "new" || functionNameToken.text == "class_initialize" ) {
 					functionName = "constructor";
+				}
+				else {
+					functionName = functionNameToken.rawText;
 				}
 				interpreterContext.pushScope(ScopeType.ArgumentList);
 				let argsString = this.getByType(TokenType.FunctionArguments).toString();
