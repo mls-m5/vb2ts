@@ -248,6 +248,13 @@ class Token {
 				else {
 					return this.wrap(this.rawText);
 				}
+			case TokenType.EqualOperator:
+				if (interpreterContext.currentScope == ScopeType.Condition) {
+					return this.wrap("==");
+				}
+				else {
+					return this.wrap(this.rawText);
+				}
 			default:
 				// if (this.text == ".") {
 				// 	return this.wrap("_with_tmp" + this.text);
@@ -308,8 +315,13 @@ class Statement extends Token {
 				interpreterContext.popScope();
 				return this.wrap("}");
 			case TokenType.IfStatement:
-				interpreterContext.pushScope(ScopeType.Function);
-				return this.wrap("if (" + this.getByType(TokenType.Condition) + ") {");
+				interpreterContext.pushScope(ScopeType.Condition);
+				//Evaluate the conditions string in "Condition"-context so that
+				//it will have double = instead of single
+				let conditionText = this.getByType(TokenType.Condition).toString();
+
+				interpreterContext.setScope(ScopeType.Function); //Set the scope without pushing a new one
+				return this.wrap("if (" + conditionText + ") {");
 			case TokenType.ElseStatement:
 				return this.wrap("} else {");
 			case TokenType.WithMemberGroup:

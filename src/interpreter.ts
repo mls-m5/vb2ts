@@ -6,7 +6,8 @@ enum ScopeType {
 	Class,
 	Global,
 	With,
-	ArgumentList
+	ArgumentList,
+	Condition,
 }
 
 class InterpreterContext {
