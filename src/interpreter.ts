@@ -223,7 +223,7 @@ class Interpreter {
 			else if (first.type == TokenType.ExitKeyword) {
 				statement.type = TokenType.ExitStatement;
 			}
-			else if (statement.tokens.length > 3 && statement.type != TokenType.Condition && statement.getByType(TokenType.EqualOperator)) {
+			else if (statement.tokens.length > 2 && statement.type != TokenType.Condition && statement.getByType(TokenType.EqualOperator)) {
 				statement.type = TokenType.Assignment;
 			}
 			else if(first.type == TokenType.NextKeyword) {
