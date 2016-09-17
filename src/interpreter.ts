@@ -85,6 +85,14 @@ class Interpreter {
 			let tokens = statement.tokens;
 
 
+			for (let i = 0; i < tokens.length; ++i) {
+				if (tokens[i].text == "'") {
+					let commentStatement = new Statement(TokenType.CommentStatement);
+					tokens[i].type = TokenType.CommentKeyword;
+					commentStatement.tokens = tokens.splice(i, tokens.length - i, commentStatement);
+					break;
+				}
+			}
 
 			for (let i = 0; i < tokens.length; ++i) {
 				if (tokens[i].type == TokenType.AsKeyword && statement.tokens.length > (i + 1)) {

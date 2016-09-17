@@ -35,6 +35,7 @@ enum TokenType {
 	ExplicitKeyword,
 	StepKeyword,
 	NextKeyword,
+	CommentKeyword,
 
 	VariableDeclarationGroup, //The touple [x] As [type]
 	ParanthesisGroup,
@@ -60,6 +61,7 @@ enum TokenType {
 	ExitStatement,
 	OptionStatement,
 	NextStatement,
+	CommentStatement,
 
 	ForStart,
 	ForStop,
@@ -110,6 +112,7 @@ var Keywords = Object.freeze({
 	explicit: TokenType.ExplicitKeyword,
 	step: TokenType.StepKeyword,
 	next: TokenType.NextKeyword,
+	"'": TokenType.CommentKeyword,
 });
 
 
@@ -219,6 +222,8 @@ class Token {
 				else {
 					return this.wrap("let");
 				}
+			case TokenType.CommentKeyword:
+				return this.wrap("//");
 			case TokenType.NotKeyword:
 				return this.textBefore + "!";
 			case TokenType.SetKeyword:
@@ -368,6 +373,14 @@ class Statement extends Token {
 			text += s.toString();
 		}
 
+		//Hack to add semicolon on assignments
+		if (this.type == TokenType.Assignment) {
+			let i = text.length - this.back().textAfter.length;
+			return text.slice(0, i) + ";" + text.slice(i, text.length - i);
+		}
+
+
+
 		return text;
 	}
 }
@@ -382,7 +395,7 @@ enum TokenizerState {
 	Paranthesis,
 };
 
-var operators = "+-*/^,.><=%@!#$&"; //Different special characters
+var operators = "+-*/'^,.><=%@!#$&"; //Different special characters
 var paranthesis = "()[]";
 
 function setKeywordType(token: Token) {

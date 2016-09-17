@@ -2,6 +2,8 @@
 /// <reference path="interpreter.ts" />
 
 
+
+
 $(document).ready( function(){
 	var tokenizer = new Tokenizer();
 	var interpreter = new Interpreter();
@@ -29,7 +31,9 @@ $(document).ready( function(){
 			}
 		}
 
-		output = (output.replace("\n", "\n\t"));
+
+		output = "\t" + output.split("\n").join("\n\t");
+		// output = (output.replace("\n", "\n\t"));
 		output = "class xx { \n " + output + "\n}";
 
 		var wrap = function(text) {
