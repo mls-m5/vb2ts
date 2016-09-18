@@ -119,12 +119,30 @@ class Interpreter {
 				}
 			}
 
+			//Group period and words to member groups
 			for (let i = 0; i < tokens.length - 1; ++i) {
 				if (tokens[i].text == "." && tokens[i + 1].type == TokenType.Word) {
 					let group = new Statement();
 					group.type = TokenType.MemberNameGroup;
 					tokens[i + 1].type = TokenType.MemberName;
 					group.setTokens(tokens.splice(i, 2, group));
+				}
+			}
+
+			//Group MemberGroups together to single identifiers
+			for (let i = tokens.length - 1; i > 1; --i) {
+				if (tokens[i].type == TokenType.MemberNameGroup && 
+					(tokens[i-1].type == TokenType.MemberNameGroup || tokens[i-1].type == TokenType.Word)) {
+					for (let j = i - 1; j > 0; --j) {
+						let t2 = tokens[j-1];
+						//Peak ahead
+						if (j == 1 || t2.type != TokenType.MemberNameGroup && t2.type != TokenType.Word) {
+							let identifierStatement = new Statement(TokenType.Identifier);
+							identifierStatement.tokens = tokens.splice(j, i - j + 1, identifierStatement);
+							i = j - 1;
+							break;
+						}
+					}
 				}
 			}
 
@@ -170,7 +188,7 @@ class Interpreter {
 					tokens[2].type = TokenType.FunctionArguments;
 				}
 			}
-			else if (tokens.length == 1 && first.type == TokenType.Word || first.type == TokenType.Identifier) {
+			else if (tokens.length == 1 && (first.type == TokenType.Word || first.type == TokenType.Identifier)) {
 				statement.type = TokenType.MethodCall;
 				first.type = TokenType.FunctionName;
 				let argStatement = new Statement(TokenType.MethodArguments);
