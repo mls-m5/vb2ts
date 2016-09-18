@@ -38,6 +38,8 @@ enum TokenType {
 	CommentKeyword,
 	AndKeyword,
 	OrKeyword,
+	MeKeyword,
+	CallKeyword,
 
 	VariableDeclarationGroup, //The touple [x] As [type]
 	ParanthesisGroup,
@@ -64,6 +66,8 @@ enum TokenType {
 	OptionStatement,
 	NextStatement,
 	CommentStatement,
+	Identifier,
+	CallStatement,
 
 	ForStart,
 	ForStop,
@@ -117,6 +121,8 @@ var Keywords = Object.freeze({
 	"'": TokenType.CommentKeyword,
 	and: TokenType.AndKeyword,
 	or: TokenType.OrKeyword,
+	me: TokenType.MeKeyword,
+	call: TokenType.CallKeyword,
 });
 
 
@@ -230,8 +236,12 @@ class Token {
 				return this.wrap("//");
 			case TokenType.NotKeyword:
 				return this.textBefore + "!";
+			case TokenType.MeKeyword:
+				return this.wrap("this");	
 			case TokenType.SetKeyword:
 				return this.wrap(""); //Hide the keyword, it is not the same in javascript
+			case TokenType.CallKeyword:
+				return this.textBefore;
 			case TokenType.DeclarationType:
 				let t = typeTranslation[this.text];
 				if (t) {
@@ -380,7 +390,7 @@ class Statement extends Token {
 
 				interpreterContext.pushScope(ScopeType.Function);
 
-				return this.wrap("for (var " + varName + "= " + start.rawText + "; " + varName + "<= " + stop.rawText + "; " + stepString + ") {");
+				return this.wrap("for (let " + varName + "= " + start.rawText + "; " + varName + "<= " + stop.rawText + "; " + stepString + ") {");
 			case TokenType.NextStatement:
 				interpreterContext.popScope(ScopeType.Function);
 				return this.wrap("}");
@@ -551,8 +561,6 @@ class Tokenizer {
 							c = text[ti];
 						}
 						i = ti - 1;
-						// let nType = state == TokenizerState.Digit? TokenType.Digit: TokenType.Word;
-						// pushToken().type = nType;
 						continue; //Skip to the next iteration
 					}
 				default:

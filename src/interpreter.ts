@@ -169,6 +169,16 @@ class Interpreter {
 					tokens[2].type = TokenType.FunctionArguments;
 				}
 			}
+			else if (tokens.length == 1 && first.type == TokenType.Word || first.type == TokenType.Identifier) {
+				statement.type = TokenType.MethodCall;
+				first.type = TokenType.FunctionName;
+				let argStatement = new Statement(TokenType.MethodArguments);
+				tokens.push(argStatement);
+			}
+			else if (first.type == TokenType.CallKeyword) {
+				statement.type = TokenType.CallStatement;
+				statement.tokens[1].type = TokenType.FunctionName;
+			}
 			else if (first.type == TokenType.WithKeyword) {
 				statement.type = TokenType.WithStatement;
 				tokens[1].type = TokenType.WithTarget;
