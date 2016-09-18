@@ -515,6 +515,11 @@ function setKeywordType(token: Token) {
 		if (token.text == "=") {
 			token.type = TokenType.EqualOperator;
 		}
+		return;
+	}
+	if (paranthesis.indexOf(firstCharacter) >= 0) {
+		token.type = TokenType.Paranthesis;
+		return;
 	}
 
 }
