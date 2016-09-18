@@ -43,6 +43,7 @@ enum TokenType {
 	SelectKeyword,
 	CaseKeyword,
 	NothingKeyword,
+	ChrFunctionName,
 
 	VariableDeclarationGroup, //The touple [x] As [type]
 	ParanthesisGroup,
@@ -133,6 +134,7 @@ var Keywords = Object.freeze({
 	select: TokenType.SelectKeyword,
 	case: TokenType.CaseKeyword,
 	nothing: TokenType.NothingKeyword,
+	chr: TokenType.ChrFunctionName,
 });
 
 var keywordTranslations = {
@@ -150,6 +152,7 @@ setTranslation("'", "//");
 setTranslation("and", "&&");
 setTranslation("or", "||");
 setTranslation("me", "this");
+setTranslation("chr", "String.fromCharCode");
 
 var shorthandVariableTypes = Object.freeze({
 	"%": "Integer",
