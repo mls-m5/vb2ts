@@ -16,6 +16,7 @@ class InterpreterContext {
 	currentWith: Token;
 	classVariables = {};
 	localVariables = {};
+	caseCount = 0; //A counter for the select case statements to add a break after each select case
 
 	reset() {
 		this.currentWith = null;
@@ -179,6 +180,14 @@ class Interpreter {
 				statement.type = TokenType.CallStatement;
 				statement.tokens[1].type = TokenType.FunctionName;
 			}
+			else if (first.type == TokenType.SelectKeyword) {
+				//Just assuming that the token[1] is case as in "Select Case"
+				statement.type = TokenType.SelectCaseStatement;
+				if (tokens.length < 3) {
+					throw "invalid select case usage: " + statement.toString();
+				}
+				tokens[2].type = TokenType.SelectCaseTarget;
+			}
 			else if (first.type == TokenType.WithKeyword) {
 				statement.type = TokenType.WithStatement;
 				tokens[1].type = TokenType.WithTarget;
@@ -230,6 +239,15 @@ class Interpreter {
 			}
 			else if (first.type == TokenType.OptionKeyword) {
 				statement.type = TokenType.OptionStatement;
+			}
+			else if (first.type == TokenType.CaseKeyword) {
+				if (tokens[1].type == TokenType.ElseKeyword) {
+					statement.type = TokenType.CaseElseStatement;
+				}
+				else {
+					statement.type = TokenType.CaseStatement;
+				}
+
 			}
 			else if (first.type == TokenType.ExitKeyword) {
 				statement.type = TokenType.ExitStatement;

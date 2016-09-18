@@ -40,6 +40,8 @@ enum TokenType {
 	OrKeyword,
 	MeKeyword,
 	CallKeyword,
+	SelectKeyword,
+	CaseKeyword,
 
 	VariableDeclarationGroup, //The touple [x] As [type]
 	ParanthesisGroup,
@@ -68,6 +70,10 @@ enum TokenType {
 	CommentStatement,
 	Identifier,
 	CallStatement,
+	SelectCaseStatement,
+	SelectCaseTarget,
+	CaseStatement,
+	CaseElseStatement,
 
 	ForStart,
 	ForStop,
@@ -123,6 +129,8 @@ var Keywords = Object.freeze({
 	or: TokenType.OrKeyword,
 	me: TokenType.MeKeyword,
 	call: TokenType.CallKeyword,
+	select: TokenType.SelectKeyword,
+	case: TokenType.CaseKeyword,
 });
 
 
@@ -242,6 +250,14 @@ class Token {
 				return this.wrap(""); //Hide the keyword, it is not the same in javascript
 			case TokenType.CallKeyword:
 				return this.textBefore;
+			case TokenType.CaseKeyword:
+				if (interpreterContext.caseCount++ > 0) {
+					//Add breaka statement if it is not the first case statement in the switch
+					return this.wrap("break;" + this.textBefore + "case");
+				}
+				else {
+					return this.wrap("case");
+				}
 			case TokenType.DeclarationType:
 				let t = typeTranslation[this.text];
 				if (t) {
@@ -394,7 +410,12 @@ class Statement extends Token {
 			case TokenType.NextStatement:
 				interpreterContext.popScope(ScopeType.Function);
 				return this.wrap("}");
-
+			case TokenType.SelectCaseStatement:
+				interpreterContext.pushScope(ScopeType.Function);
+				interpreterContext.caseCount = 0;
+				return this.wrap("switch(" + this.getByType(TokenType.SelectCaseTarget) + "){");
+			case TokenType.CaseElseStatement:
+				return this.wrap("break;" + this.getBefore() + "default:");
 			default:
 				break;
 		}
