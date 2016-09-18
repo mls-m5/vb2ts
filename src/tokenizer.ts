@@ -36,6 +36,8 @@ enum TokenType {
 	StepKeyword,
 	NextKeyword,
 	CommentKeyword,
+	AndKeyword,
+	OrKeyword,
 
 	VariableDeclarationGroup, //The touple [x] As [type]
 	ParanthesisGroup,
@@ -113,6 +115,8 @@ var Keywords = Object.freeze({
 	step: TokenType.StepKeyword,
 	next: TokenType.NextKeyword,
 	"'": TokenType.CommentKeyword,
+	and: TokenType.AndKeyword,
+	or: TokenType.OrKeyword,
 });
 
 
@@ -255,6 +259,10 @@ class Token {
 				else {
 					return this.wrap(this.rawText);
 				}
+			case TokenType.AndKeyword:
+				return this.wrap("&&");
+			case TokenType.OrKeyword:
+				return this.wrap("||");
 			default:
 				// if (this.text == ".") {
 				// 	return this.wrap("_with_tmp" + this.text);
