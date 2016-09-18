@@ -42,6 +42,7 @@ enum TokenType {
 	CallKeyword,
 	SelectKeyword,
 	CaseKeyword,
+	NothingKeyword,
 
 	VariableDeclarationGroup, //The touple [x] As [type]
 	ParanthesisGroup,
@@ -131,8 +132,24 @@ var Keywords = Object.freeze({
 	call: TokenType.CallKeyword,
 	select: TokenType.SelectKeyword,
 	case: TokenType.CaseKeyword,
+	nothing: TokenType.NothingKeyword,
 });
 
+var keywordTranslations = {
+};
+
+function setTranslation(original: string, target: string) {
+	keywordTranslations[Keywords[original]] = target;
+}
+setTranslation("nothing", "null");
+setTranslation("else", "} else {");
+setTranslation("not", "!");
+setTranslation("if", "if"); //For the lower case
+setTranslation("new", "new");
+setTranslation("'", "//");
+setTranslation("and", "&&");
+setTranslation("or", "||");
+setTranslation("me", "this");
 
 var shorthandVariableTypes = Object.freeze({
 	"%": "Integer",
@@ -227,9 +244,14 @@ class Token {
 	}
 
 	toString() {
+		let translation = keywordTranslations[this.type];
+		if (typeof translation !== 'undefined') {
+			return this.wrap(translation);
+		}
+
 		switch (this.type) {
-			case TokenType.NewKeyword:
-				return this.wrap(this.text);
+			// case TokenType.NewKeyword:
+			// 	return this.wrap(this.text);
 			case TokenType.ScopeDeclaration:
 				if (this.specifier == ScopeTypes.static) {
 					return this.wrap("// Static type not supported implement in other way : ");
@@ -240,14 +262,15 @@ class Token {
 				else {
 					return this.wrap("let");
 				}
-			case TokenType.CommentKeyword:
-				return this.wrap("//");
-			case TokenType.NotKeyword:
-				return this.textBefore + "!";
-			case TokenType.MeKeyword:
-				return this.wrap("this");	
+			// case TokenType.CommentKeyword:
+			// 	return this.wrap("//");
+			// case TokenType.NotKeyword:
+			// 	return this.textBefore + "!";
+			// case TokenType.MeKeyword:
+			// 	return this.wrap("this");	
 			case TokenType.SetKeyword:
-				return this.wrap(""); //Hide the keyword, it is not the same in javascript
+				return this.textBefore;
+				// return this.wrap(""); //Hide the keyword, it is not the same in javascript
 			case TokenType.CallKeyword:
 				return this.textBefore;
 			case TokenType.CaseKeyword:
@@ -285,14 +308,11 @@ class Token {
 				else {
 					return this.wrap(this.rawText);
 				}
-			case TokenType.AndKeyword:
-				return this.wrap("&&");
-			case TokenType.OrKeyword:
-				return this.wrap("||");
+			// case TokenType.AndKeyword:
+			// 	return this.wrap("&&");
+			// case TokenType.OrKeyword:
+			// 	return this.wrap("||");
 			default:
-				// if (this.text == ".") {
-				// 	return this.wrap("_with_tmp" + this.text);
-				// }
 				return this.wrap(this.rawText);;
 		}
 	}
