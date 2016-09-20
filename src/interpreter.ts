@@ -246,11 +246,24 @@ class Interpreter {
 			}
 			else if (first.type == TokenType.IfKeyword) {
 				statement.type = TokenType.IfStatement;
-				for (let i = 1; i < statement.tokens.length; ++i) {
-					if (statement.tokens[i].type == TokenType.ThenKeyword) {
+				for (let i = 1; i < tokens.length; ++i) {
+					if (tokens[i].type == TokenType.ThenKeyword) {
 						let condition = new Statement();
 						condition.type = TokenType.Condition;
 						condition.setTokens(statement.tokens.splice(1, i - 1, condition));
+
+						if (tokens.length == 3) {
+							break;
+						}
+						else {
+							//Single line if statement
+							let hangingStatement = new Statement(TokenType.Line);
+							hangingStatement.setTokens(tokens.splice(3, tokens.length - 3));
+							hangingStatement = this.processStatement(hangingStatement);
+							let ifHangingStatement = new Statement(TokenType.HangingIfStatement);
+							ifHangingStatement.setTokens([hangingStatement]);
+							tokens.push(ifHangingStatement);
+						}
 						break;
 					}
 				}

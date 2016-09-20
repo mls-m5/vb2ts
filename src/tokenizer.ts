@@ -57,6 +57,7 @@ enum TokenType {
 	EndStatement,
 	IfStatement,
 	ElseStatement,
+	HangingIfStatement,
 	MethodCall,
 	DeclarationType,
 	DeclarationName,
@@ -378,7 +379,13 @@ class Statement extends Token {
 				let conditionText = this.getByType(TokenType.Condition).toString();
 
 				interpreterContext.setScope(ScopeType.Function); //Set the scope without pushing a new one
-				return this.wrap("if (" + conditionText + ") {");
+
+				let hangingStatement = this.getByType(TokenType.HangingIfStatement);
+				let hangingStatementString = "";
+				if (hangingStatement) {
+					hangingStatementString = " " + hangingStatement.toString() + "}";
+				}
+				return this.wrap("if (" + conditionText + ") {" + hangingStatementString);
 			case TokenType.ElseStatement:
 				return this.wrap("} else {");
 			case TokenType.WithMemberGroup:
